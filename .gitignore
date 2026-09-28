@@ -8,3 +8,42 @@ build/
 .DS_Store
 .vite/
 coverage/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Secrets / credentials
+*.pem
+*.key
+*.p12
+*.pfx
+kubeconfig
+kubeconfig.*
+.aws/
+
+# Kubernetes / Helm generated files
+*.tgz
+
+# Security / supply-chain generated artifacts
+sbom*.json
+sbom*.spdx
+sbom*.spdx.json
+sbom*.cyclonedx.json
+trivy-report*
+checkov-report*
+gitleaks-report*
+
+# Local tooling
+.vscode/
+.idea/
+Thumbs.db
