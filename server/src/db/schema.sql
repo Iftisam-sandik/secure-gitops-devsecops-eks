@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS categories (
   UNIQUE KEY uq_name_type (name, type)
 );
 
-ALTER TABLE categories DROP COLUMN IF EXISTS color;
 
 INSERT IGNORE INTO categories (name, type, icon) VALUES
   ('Salary',       'income',  'briefcase'),
@@ -134,7 +133,6 @@ CREATE TABLE IF NOT EXISTS transactions (
   CONSTRAINT fk_tx_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
 );
 
-ALTER TABLE transactions ADD COLUMN IF NOT EXISTS description TEXT NULL DEFAULT NULL;
 
 INSERT IGNORE INTO transactions (id, account_id, category_id, amount, note, tx_date, tx_time) VALUES
   (1,  3, 1,  5200.00, 'Monthly salary — Acme Sdn Bhd',   '2026-06-16', '09:00:00'),
