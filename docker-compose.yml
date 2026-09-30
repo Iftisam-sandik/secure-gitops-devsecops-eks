@@ -1,15 +1,11 @@
 services:
   mysql:
     image: mysql:8.4
-    container_name: ledgr_mysql
-    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ledgr
       MYSQL_USER: ledgr
-      MYSQL_PASSWORD: ledgr_password
-    ports:
-      - "3306:3306"
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - ledgr_mysql_data:/var/lib/mysql
       - ./server/src/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
@@ -17,7 +13,27 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  backend:
+    image: ledgr-backend:v1
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ledgr
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ledgr
+      PORT: 3001
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    image: ledgr-frontend:v1
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
 
 volumes:
   ledgr_mysql_data:
