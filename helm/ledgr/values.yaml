@@ -1,0 +1,53 @@
+frontend:
+  replicaCount: 1
+  image:
+    repository: ledgr-frontend
+    tag: v1
+    pullPolicy: Never
+  service:
+    port: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+backend:
+  replicaCount: 1
+  image:
+    repository: ledgr-backend
+    tag: v1
+    pullPolicy: Never
+  service:
+    port: 3001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+mysql:
+  image:
+    repository: mysql
+    tag: "8.4"
+    pullPolicy: IfNotPresent
+  service:
+    port: 3306
+  database: ledgr
+  user: ledgr
+  storage:
+    size: 5Gi
+    storageClass: standard
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+existingSecret: ledgr-db-secret
