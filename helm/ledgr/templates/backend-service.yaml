@@ -8,4 +8,4 @@ spec:
   ports:
     - name: http
       port: {{ .Values.backend.service.port }}
-      targetPort: http
+      targetPort: {{ .Values.backend.service.port }}

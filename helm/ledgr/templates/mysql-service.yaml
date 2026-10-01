@@ -9,4 +9,4 @@ spec:
   ports:
     - name: mysql
       port: {{ .Values.mysql.service.port }}
-      targetPort: mysql
+      targetPort: {{ .Values.mysql.service.port }}
