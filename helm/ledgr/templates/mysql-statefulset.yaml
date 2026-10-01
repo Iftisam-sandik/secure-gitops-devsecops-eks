@@ -86,4 +86,4 @@ spec:
 
         - name: mysql-init
           configMap:
-            name: {{ .Release.Name }}-mysql-init-schema
+            name: mysql-init-schema
