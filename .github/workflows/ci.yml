@@ -197,3 +197,14 @@ jobs:
           ignore-unfixed: true
           format: 'table'
           exit-code: '1'
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          image: '${{ matrix.image }}:ci'
+          format: 'cyclonedx-json'
+          syft-version: 'v1.54.0'
+          artifact-name: '${{ matrix.image }}-sbom.cdx.json'
+          upload-artifact: true
+          upload-artifact-retention: 7
+          upload-release-assets: false
