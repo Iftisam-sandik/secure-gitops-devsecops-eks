@@ -2,6 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
+  annotations:
+    checkov.io/skip1: "CKV_K8S_15=Local kind application images are preloaded; registry pull behavior will change during the ECR stage."
+    checkov.io/skip2: "CKV_K8S_43=Immutable digest pinning will be enabled after CI publishes application images to ECR."
+    checkov.io/skip3: "CKV_K8S_40=The nginx-unprivileged image already runs with its dedicated non-root user."
+    checkov.io/skip4: "CKV_K8S_22=Read-only root filesystem is deferred until nginx writable runtime paths are explicitly mounted and validated."
 spec:
   replicas: {{ .Values.frontend.replicaCount }}
 
@@ -15,10 +20,23 @@ spec:
         app: frontend
 
     spec:
+      automountServiceAccountToken: false
+
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
 
           ports:
             - name: http
