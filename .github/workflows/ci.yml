@@ -124,3 +124,28 @@ jobs:
 
       - name: Scan Terraform configuration
         run: checkov -d terraform --framework terraform --compact
+
+  helm-scan:
+    name: Checkov Helm Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: 'v4.3.0'
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Checkov
+        run: python -m pip install checkov==3.3.21
+
+      - name: Scan Helm chart
+        run: checkov -d helm/ledgr --framework helm --compact
