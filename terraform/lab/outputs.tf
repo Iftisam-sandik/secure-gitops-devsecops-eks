@@ -1,14 +1,14 @@
 output "lab_instance_id" {
-  description = "EC2 instance ID of the GitOps lab server"
+  description = "GitOps lab EC2 instance ID"
   value       = aws_instance.lab.id
 }
 
 output "lab_public_ip" {
-  description = "Public IPv4 address of the GitOps lab server"
+  description = "Current public IPv4 address of the GitOps lab instance"
   value       = aws_instance.lab.public_ip
 }
 
 output "ubuntu_ami_id" {
-  description = "Ubuntu 26.04 AMI selected for the lab server"
-  value       = data.aws_ami.ubuntu_2604.id
+  description = "AMI currently used by the GitOps lab instance"
+  value       = aws_instance.lab.ami
 }

@@ -1,4 +1,6 @@
 resource "aws_security_group" "lab" {
+  #checkov:skip=CKV_AWS_382:Outbound internet access is required for package, container, Kubernetes, and GitHub downloads in the temporary NAT-free lab.
+
   name        = "gitops-lab-sg"
   description = "Security group for the temporary GitOps lab server"
   vpc_id      = aws_vpc.lab.id
