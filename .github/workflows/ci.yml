@@ -158,6 +158,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    permissions:
+      contents: read
+      id-token: write
+
     strategy:
       fail-fast: false
       matrix:
@@ -208,3 +212,32 @@ jobs:
           upload-artifact: true
           upload-artifact-retention: 7
           upload-release-assets: false
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::816975652337:role/secure-gitops-github-actions-ecr
+          aws-region: ap-south-1
+          allowed-account-ids: '816975652337'
+
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push scanned image to ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_NAME: ${{ matrix.image }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          EXISTING_IMAGES=$(aws ecr batch-get-image --repository-name "$IMAGE_NAME" --image-ids imageTag="$IMAGE_TAG" --query 'length(images)' --output text)
+
+          if [ "$EXISTING_IMAGES" = "1" ]; then
+            echo "Image $IMAGE_NAME:$IMAGE_TAG already exists in ECR; skipping push."
+          else
+            docker tag "$IMAGE_NAME:ci" "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+            docker push "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+          fi
