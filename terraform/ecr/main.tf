@@ -6,13 +6,15 @@ locals {
 }
 
 resource "aws_ecr_repository" "app" {
+  #checkov:skip=CKV_AWS_136:ECR repositories use AES-256 encryption at rest; switching existing repositories to KMS would require replacement and is unnecessary for this cost-sensitive lab.
+
   for_each = local.repositories
 
   name                 = each.value
   image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
-    scan_on_push = false
+    scan_on_push = true
   }
 
   encryption_configuration {
