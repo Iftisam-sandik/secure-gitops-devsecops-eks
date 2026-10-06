@@ -273,3 +273,128 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           cosign verify             --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@${{ github.ref }}"             --certificate-oidc-issuer "https://token.actions.githubusercontent.com"             "${{ steps.image_digest.outputs.uri }}"
+
+  update-gitops-digests:
+    name: Update GitOps Image Digests
+    needs: container-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Check for newer main commit
+        id: freshness
+        run: |
+          git fetch origin main
+          LATEST_SHA=$(git rev-parse origin/main)
+
+          if [ "$LATEST_SHA" = "$GITHUB_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "A newer commit already exists on main; skipping stale digest update."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials
+        if: steps.freshness.outputs.current == 'true'
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::816975652337:role/secure-gitops-github-actions-ecr
+          aws-region: ap-south-1
+          allowed-account-ids: '816975652337'
+
+      - name: Resolve ECR image digests
+        if: steps.freshness.outputs.current == 'true'
+        id: digests
+        run: |
+          BACKEND_DIGEST=$(aws ecr batch-get-image \
+            --repository-name ledgr-backend \
+            --image-ids imageTag="$GITHUB_SHA" \
+            --query 'images[0].imageId.imageDigest' \
+            --output text)
+
+          FRONTEND_DIGEST=$(aws ecr batch-get-image \
+            --repository-name ledgr-frontend \
+            --image-ids imageTag="$GITHUB_SHA" \
+            --query 'images[0].imageId.imageDigest' \
+            --output text)
+
+          if [[ ! "$BACKEND_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid backend digest: $BACKEND_DIGEST"
+            exit 1
+          fi
+
+          if [[ ! "$FRONTEND_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid frontend digest: $FRONTEND_DIGEST"
+            exit 1
+          fi
+
+          echo "backend=$BACKEND_DIGEST" >> "$GITHUB_OUTPUT"
+          echo "frontend=$FRONTEND_DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Update EKS Helm image digests
+        if: steps.freshness.outputs.current == 'true'
+        env:
+          BACKEND_DIGEST: ${{ steps.digests.outputs.backend }}
+          FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("helm/ledgr/values-eks.yaml")
+          text = path.read_text()
+
+          updates = {
+              "ledgr-backend": os.environ["BACKEND_DIGEST"],
+              "ledgr-frontend": os.environ["FRONTEND_DIGEST"],
+          }
+
+          for image, digest in updates.items():
+              pattern = re.compile(
+                  rf'(?m)^([ \t]*repository:[ \t]*[^\n]*/{re.escape(image)}[ \t]*\n'
+                  rf'[ \t]*digest:)[ \t]*.*$'
+              )
+
+              text, count = pattern.subn(
+                  lambda match: f'{match.group(1)} "{digest}"',
+                  text,
+                  count=1,
+              )
+
+              if count != 1:
+                  raise SystemExit(
+                      f"STOP: expected one digest field for {image}, found {count}"
+                  )
+
+          path.write_text(text)
+          PY
+
+          git diff --check
+          cat helm/ledgr/values-eks.yaml
+
+      - name: Commit GitOps digest update
+        if: steps.freshness.outputs.current == 'true'
+        run: |
+          if git diff --quiet -- helm/ledgr/values-eks.yaml; then
+            echo "GitOps image digests are already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add helm/ledgr/values-eks.yaml
+          git commit -m "Update EKS image digests [skip ci]"
+          git push origin HEAD:main

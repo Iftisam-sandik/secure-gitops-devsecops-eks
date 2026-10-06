@@ -3,6 +3,7 @@ frontend:
   image:
     repository: ledgr-frontend
     tag: v1
+    digest: ""
     pullPolicy: Never
   service:
     port: 8080
@@ -19,6 +20,7 @@ backend:
   image:
     repository: ledgr-backend
     tag: v1
+    digest: ""
     pullPolicy: Never
   service:
     port: 3001

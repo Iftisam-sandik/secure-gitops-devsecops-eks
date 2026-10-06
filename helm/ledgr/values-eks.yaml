@@ -1,0 +1,11 @@
+frontend:
+  image:
+    repository: 816975652337.dkr.ecr.ap-south-1.amazonaws.com/ledgr-frontend
+    digest: ""
+    pullPolicy: IfNotPresent
+
+backend:
+  image:
+    repository: 816975652337.dkr.ecr.ap-south-1.amazonaws.com/ledgr-backend
+    digest: ""
+    pullPolicy: IfNotPresent
